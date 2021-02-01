@@ -54,6 +54,7 @@ void wifi_reconnect(const char* ssid, const char* wifi_password, byte ip_last_by
           }
       }
   }
+
   logln("WiFi connected: " + WiFi.localIP().toString() + " / RSSI " + WiFi.RSSI());
 }
 
@@ -69,6 +70,14 @@ void wifi_wakeup(){
   WiFi.forceSleepWake();
   delay(1);
   WiFi.mode(WIFI_STA);
+}
+
+// turn off (infinite deep sleep) if battery voltage low
+void protect_battery(float voltage){
+    if (voltage < 3){
+        logln("Battery voltage low! Going to deep sleep.");
+        ESP.deepSleep(0);
+    }
 }
 
 // HTTP based communication with sensor_broker middleware
@@ -89,10 +98,11 @@ void Broker::addProperty(String name, String value) {
 }
 
 bool Broker::upload(){
-   HTTPClient http;
+   WiFiClient client;
+   HTTPClient http; //must be declared after WiFiClient for correct destruction order, because used by http.begin(client,...)
    logln("Uploading to " + _url);
 
-   http.begin(_url.c_str());
+   http.begin(client, _url.c_str());
    int response = http.GET();
    http.end();
    if (response > 0) {
