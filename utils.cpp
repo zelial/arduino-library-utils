@@ -22,27 +22,32 @@ void init_serial(){
 
 // handle wifi connection
 // speed up measures taken from https://pokewithastick.net/esp8266-fast-wifi-connect-post
-#define GATEWAY IPAddress(192, 168, 1, 1)
+#define GATEWAY IPAddress(10, 2, 0, 1)
 #define MASK IPAddress(255, 255, 255, 0)
-uint8_t home_mac[6] = { 0x38, 0xD5, 0x47, 0x84, 0x77, 0x00 };
-int channel = 9;
+uint8_t home_mac[6] = { 0x34, 0x60, 0xF9, 0x4D, 0x21, 0xF1 };
+//uint8_t home_mac[6] = { 0x9C, 0xA2, 0xF4, 0xF2, 0x31, 0x10 };
+int channel = 8;
 
 void wifi_reconnect(const char* ssid, const char* wifi_password, byte ip_last_byte){
   // fast (re)connect
   int counter = 0;
-  WiFi.config(IPAddress(192, 168, 1, ip_last_byte), GATEWAY, MASK);
   logln("Connecting to WiFi " + String(ssid));
+  // this doesn't work on the tp-link I use now, commenting out
+  /*
+  WiFi.config(IPAddress(10, 2, 0, ip_last_byte), GATEWAY, MASK);
   while (WiFi.status() != WL_CONNECTED) {
       delay(5);
       if (++counter > 1000) break;
   }
+  */
 
   // slow full connect
   if (WiFi.status() != WL_CONNECTED) {
-      logln("Fast reconnect failed, doing full connect");
+      logln("Fast reconnect failed/skipped, doing full connect");
       if (!WiFi.getAutoConnect()) WiFi.setAutoConnect(true);
       if (!WiFi.getPersistent()) WiFi.persistent(true);
       WiFi.begin(ssid, wifi_password, channel, home_mac, true);
+      //WiFi.begin(ssid, wifi_password);
       counter = 0;
       while (WiFi.status() != WL_CONNECTED) {
           delay(200);
@@ -56,6 +61,7 @@ void wifi_reconnect(const char* ssid, const char* wifi_password, byte ip_last_by
   }
 
   logln("WiFi connected: " + WiFi.localIP().toString() + " / RSSI " + WiFi.RSSI());
+  WiFi.persistent(true);
 }
 
 void wifi_sleep(){
@@ -74,7 +80,7 @@ void wifi_wakeup(){
 
 // turn off (infinite deep sleep) if battery voltage low
 void protect_battery(float voltage){
-    if (voltage < 3){
+    if (voltage < LOW_VOLTAGE){
         logln("Battery voltage low! Going to deep sleep.");
         ESP.deepSleep(0);
     }
@@ -119,3 +125,12 @@ bool Broker::upload(){
 String Broker::getUrl(){
     return _url;
 }
+
+// convert battery voltage to battery capacity percentage
+// simple, imprecise linear conversion
+int voltage2percentage(float voltage){
+    // 4.2V is max ~ equal to 100%
+    // 100 / (4.2 - 3) = 83.3
+   return (voltage - LOW_VOLTAGE) * 83.3;
+}
+

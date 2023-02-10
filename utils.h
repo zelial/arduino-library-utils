@@ -3,6 +3,8 @@
 #include <ESP8266HTTPClient.h>
 #include <Arduino.h>
 
+#define LOW_VOLTAGE 3
+
 // output to console including timestamp
 void log(String message);
 void logln(String message);
@@ -14,6 +16,8 @@ void init_serial();
 void wifi_reconnect(const char* ssid, const char* wifi_password, byte ip_last_byte);
 void wifi_sleep();
 void wifi_wakeup();
+
+void protect_battery(float voltage);
 
 // HTTP based communication with sensor_broker middleware
 class Broker {
@@ -27,3 +31,4 @@ class Broker {
     String getUrl();
 };
 
+int voltage2percentage(float voltage);
